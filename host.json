@@ -14,7 +14,7 @@
   },
   "customHandler": {
     "description": {
-      "defaultExecutablePath": "server",
+      "defaultExecutablePath": "app",
       "workingDirectory": "",
       "arguments": []
     },
