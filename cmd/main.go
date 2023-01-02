@@ -6,19 +6,28 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/G1GACHADS/func-lexo/bionic"
-	"github.com/gofiber/fiber/v2"
+	"github.com/G1GACHADS/func-lexo/internal/clients"
+	"github.com/G1GACHADS/func-lexo/internal/logger"
+	"github.com/G1GACHADS/func-lexo/internal/server"
 )
 
 func main() {
+	logger.Init(os.Getenv("ENVIRONMENT") == "dev")
+
 	listenAddr := ":8080"
 	if val, ok := os.LookupEnv("FUNCTIONS_CUSTOMHANDLER_PORT"); ok {
 		listenAddr = ":" + val
 	}
 
-	srv := fiber.New()
+	clients, err := clients.New(clients.ClientsConfig{
+		AzureOCPSubscriptionKey: os.Getenv("OCP_APIM_SUBSCRIPTION_KEY"),
+		AzureOCPEndpoint:        os.Getenv("OCP_APIM_ENDPOINT"),
+	})
+	if err != nil {
+		logger.M.Fatal(err)
+	}
 
-	srv.Post("/api/bionic", bionic.Convert)
+	srv := server.New(clients)
 
 	go func() {
 		if err := srv.Listen(listenAddr); err != nil {
