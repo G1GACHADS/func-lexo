@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/mattn/godown"
 )
 
 func Convert(content string, fixation, saccade int) (string, error) {
@@ -51,10 +52,24 @@ func parseConvertedText(body io.ReadCloser) (string, error) {
 		return "", err
 	}
 
-	html, err := doc.Find(".bionic-reader .bionic-reader-content .bionic-reader-container").First().Html()
+	// Remove class attributes for each bold tags
+	doc.Find(".bionic-reader-container").Find("b").RemoveAttr("class")
+
+	doc.Find(".bionic-reader-container").Contents().Each(func(i int, s *goquery.Selection) {
+		if goquery.NodeName(s) == "#comment" {
+			s.Remove()
+		}
+	})
+
+	html, err := doc.Find(".bionic-reader-container").Html()
 	if err != nil {
 		return "", err
 	}
 
-	return strings.TrimSpace(html), nil
+	var buf bytes.Buffer
+	if err := godown.Convert(&buf, strings.NewReader(strings.TrimSpace(html)), nil); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
