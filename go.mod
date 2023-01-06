@@ -8,6 +8,7 @@ require (
 	github.com/PuerkitoBio/goquery v1.8.0
 	github.com/gofiber/fiber/v2 v2.40.1
 	github.com/mattn/go-colorable v0.1.13
+	github.com/russross/blackfriday/v2 v2.1.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20221217163422-3c43f8badb15
 )
@@ -25,6 +26,7 @@ require (
 	github.com/klauspost/compress v1.15.9 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
+	github.com/mattn/godown v0.0.1 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.41.0 // indirect
