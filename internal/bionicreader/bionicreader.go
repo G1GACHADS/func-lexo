@@ -13,7 +13,12 @@ import (
 	"github.com/mattn/godown"
 )
 
-func Convert(content string, fixation, saccade int) (string, error) {
+type BionicReaderResult struct {
+	Markdown string `json:"markdown"`
+	Text     string `json:"text"`
+}
+
+func Convert(content string, fixation, saccade int) (BionicReaderResult, error) {
 	payload := bytes.NewBufferString(url.Values{
 		"content":       {content},
 		"fixation":      {strconv.FormatInt(int64(fixation), 10)},
@@ -24,7 +29,7 @@ func Convert(content string, fixation, saccade int) (string, error) {
 
 	req, err := http.NewRequest(http.MethodPost, os.Getenv("BIONIC_READING_API_URL"), payload)
 	if err != nil {
-		return "", err
+		return BionicReaderResult{}, err
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -34,22 +39,17 @@ func Convert(content string, fixation, saccade int) (string, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return BionicReaderResult{}, err
 	}
 	defer resp.Body.Close()
 
-	convertedText, err := parseConvertedText(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	return convertedText, nil
+	return parseConvertedText(resp.Body)
 }
 
-func parseConvertedText(body io.ReadCloser) (string, error) {
+func parseConvertedText(body io.ReadCloser) (BionicReaderResult, error) {
 	doc, err := goquery.NewDocumentFromReader(body)
 	if err != nil {
-		return "", err
+		return BionicReaderResult{}, err
 	}
 
 	// Remove class attributes for each bold tags
@@ -63,13 +63,20 @@ func parseConvertedText(body io.ReadCloser) (string, error) {
 
 	html, err := doc.Find(".bionic-reader-container").Html()
 	if err != nil {
-		return "", err
+		return BionicReaderResult{}, err
 	}
 
-	var buf bytes.Buffer
-	if err := godown.Convert(&buf, strings.NewReader(strings.TrimSpace(html)), nil); err != nil {
-		return "", err
+	html = strings.TrimSpace(html)
+
+	var md bytes.Buffer
+	if err := godown.Convert(&md, strings.NewReader(html), nil); err != nil {
+		return BionicReaderResult{}, err
 	}
 
-	return buf.String(), nil
+	raw := doc.Find(".bionic-reader-container").Text()
+
+	return BionicReaderResult{
+		Markdown: md.String(),
+		Text:     raw,
+	}, nil
 }

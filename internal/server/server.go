@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/G1GACHADS/func-lexo/bionic"
+	"github.com/G1GACHADS/func-lexo/bionicconfig"
 	"github.com/G1GACHADS/func-lexo/internal/clients"
 	"github.com/G1GACHADS/func-lexo/internal/logger"
 	"github.com/gofiber/fiber/v2"
@@ -30,6 +31,9 @@ func New(clients clients.Clients) *fiber.App {
 
 	handlerBionicConverter := bionic.NewHandler(clients.AzureComputerVisionClient)
 	srv.Post("/api/bionic", handlerBionicConverter.Handler)
+
+	handlerBionicConverterRaw := bionicconfig.NewHandler()
+	srv.Post("/api/bionicconfig", handlerBionicConverterRaw.Handler)
 
 	return srv
 }

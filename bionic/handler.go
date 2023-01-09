@@ -28,7 +28,8 @@ type ConvertParams struct {
 }
 
 type ConvertOutput struct {
-	Html        string `json:"html"`
+	Result      string `json:"result"`
+	ResultRaw   string `json:"result_raw"`
 	BoundingBox string `json:"bounding_box"`
 }
 
@@ -38,15 +39,11 @@ var supportedImageTypes = []string{
 }
 
 func (h ConvertHandler) Handler(c *fiber.Ctx) error {
-	h.log.Debug("Handling request...")
-	// Image input and OCR Logic goes here
 	c.Accepts(fiber.MIMEMultipartForm)
 
 	var request ConvertParams
 
-	h.log.Debug("Parsing body...")
 	if err := c.BodyParser(&request); err != nil {
-		h.log.Debug("Failed parsing body reason:\n", err.Error())
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
@@ -61,10 +58,9 @@ func (h ConvertHandler) Handler(c *fiber.Ctx) error {
 
 	image := form.File["image"][0]
 
-	h.log.Debug("Opening multipart image file...")
 	file, err := image.Open()
 	if err != nil {
-		h.log.Debug("Failed opening multipart image file reason:\n", err.Error())
+		h.log.Warn("Failed opening multipart image file reason:\n", err.Error())
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
@@ -76,30 +72,25 @@ func (h ConvertHandler) Handler(c *fiber.Ctx) error {
 		})
 	}
 
-	h.log.Debug("Sending image into Azure Cognitive Service for OCR...")
 	ocrResult, err := h.acvClient.RecognizePrintedOCR(c.Context(), file)
 	if err != nil {
-		h.log.Debug("Failed sending image into Azure Cognitive Service for OCR reason:\n", err.Error())
+		h.log.Warn("Failed sending image into Azure Cognitive Service for OCR reason:\n", err.Error())
 		return fiber.NewError(fiber.StatusServiceUnavailable, "The Bionic Reading API is currently unavailable, Try again later.")
 	}
 
 	mergedOCRResult := h.acvClient.MergeOCRResultLines(ocrResult)
 
-	h.log.Debug("Converting OCR result into bionic text...")
-
-	var output ConvertOutput
-
-	output.Html, err = bionicreader.Convert(mergedOCRResult.MergedContent, request.Fixation, request.Saccade)
+	result, err := bionicreader.Convert(mergedOCRResult.MergedContent, request.Fixation, request.Saccade)
 	if err != nil {
-		h.log.Debug("Failed converting OCR result into bionic text reason:\n", err.Error())
+		h.log.Warn("Failed converting OCR result into bionic text reason:\n", err.Error())
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
 			"message": "Failed converting OCR result into bionic text",
 			"error":   err.Error(),
 		})
 	}
 
-	h.log.Debug("Result:")
-	h.log.Debug(output)
-
-	return c.Status(fiber.StatusOK).JSON(output)
+	return c.Status(fiber.StatusOK).JSON(ConvertOutput{
+		Result:    result.Markdown,
+		ResultRaw: result.Text,
+	})
 }
